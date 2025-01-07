@@ -43,7 +43,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
                 const updatedProduct = await Product.findByIdAndUpdate(
                     id,
                     { $set: updateFields },
-                    { new: true, runValidators: true } // Return the updated document and validate fields
+                    { new: true, runValidators: true } 
                 );
 
                 if (!updatedProduct) {
@@ -57,28 +57,31 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             }
             break;
 
-        default:
-            res.setHeader('Allow', ['GET', 'POST', 'PATCH']);
-            res.status(405).json({ error: `Method ${req.method} not allowed` });
-    }
-       
-};
-const updateProduct = async () => {
-    const response = await fetch('/api/product', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            id: '63b7f2e5e4b07b0012345678',
-            price: 29.99,
-            description: 'New description'
-        })
-    });
-
-    const data = await response.json();
-    console.log(data);
-};
-
-updateProduct();
+            case 'DELETE':
+                try {
+                    const { id } = req.body;
+    
+                    if (!id) {
+                        return res.status(400).json({ error: 'Product ID is required for deletion.' });
+                    }
+    
+                    const deletedProduct = await Product.findByIdAndDelete(id);
+    
+                    if (!deletedProduct) {
+                        return res.status(404).json({ error: 'Product not found.' });
+                    }
+    
+                    res.status(200).json({ message: 'Product deleted successfully.', product: deletedProduct });
+                } catch (error: any) {
+                    res.status(500).json({ error: 'Failed to delete product.', details: error.message });
+                }
+                break;
+    
+            default:
+                res.setHeader('Allow', ['GET', 'POST', 'PATCH', 'DELETE']);
+                res.status(405).json({ error: `Method ${req.method} not allowed` });
+        }
+    };
 
 
 export default handler;
