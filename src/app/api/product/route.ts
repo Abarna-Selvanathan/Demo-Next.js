@@ -1,100 +1,109 @@
-// import { NextApiRequest, NextApiResponse } from 'next';
-// import connectToDatabase from '../../../../lib/db'; 
-// import Product from '../../api/modules/Product'; 
-
-// const handler = async (req: Request) => {
-//     await connectToDatabase();
-
-//     switch (req.method) {
-//         case 'GET':
-//             try {
-//                 const products = await Product.find();
-//                 res.status(200).json(products);
-//             } catch (error: any) {
-//                 res.status(500).json({ error: error.message || 'Internal Server Error' });
-//             }
-//             break;
-
-//         case 'POST':
-//             try {
-//                 const { name, price, description } = req.body;
-
-//                 if (!name || !price) {
-//                     return res.status(400).json({ error: 'Name and price are required.' });
-//                 }
-
-//                 const newProduct = new Product({ name, price, description });
-//                 const savedProduct = await newProduct.save();
-
-//                 res.status(201).json(savedProduct);
-//             } catch (error: any) {
-//                 console.error('Error saving product:', error.message);
-//                 res.status(500).json({ error: 'Failed to save product.', details: error.message });
-//             }
-//             break;
-//             case 'PATCH':
-//             try {
-//                 const { id, ...updateFields } = req.body;
-
-//                 if (!id) {
-//                     return res.status(400).json({ error: 'Product ID is required for updates.' });
-//                 }
-
-//                 const updatedProduct = await Product.findByIdAndUpdate(
-//                     id,
-//                     { $set: updateFields },
-//                     { new: true, runValidators: true } 
-//                 );
-
-//                 if (!updatedProduct) {
-//                     return res.status(404).json({ error: 'Product not found.' });
-//                 }
-
-//                 res.status(200).json(updatedProduct);
-//             } catch (error: any) {
-//                 console.error('Error updating product:', error.message);
-//                 res.status(500).json({ error: 'Failed to update product.', details: error.message });
-//             }
-//             break;
-
-//             case 'DELETE':
-//                 try {
-//                     const { id } = req.body;
-    
-//                     if (!id) {
-//                         return res.status(400).json({ error: 'Product ID is required for deletion.' });
-//                     }
-    
-//                     const deletedProduct = await Product.findByIdAndDelete(id);
-    
-//                     if (!deletedProduct) {
-//                         return res.status(404).json({ error: 'Product not found.' });
-//                     }
-
-                    
-    
-//                     res.status(200).json({ message: 'Product deleted successfully.', product: deletedProduct });
-//                 } catch (error: any) {
-//                     res.status(500).json({ error: 'Failed to delete product.', details: error.message });
-//                 }
-//                 break;
-    
-//             default:
-//                 res.setHeader('Allow', ['GET', 'POST', 'PATCH', 'DELETE']);
-//                 res.status(405).json({ error: `Method ${req.method} not allowed` });
-//         }
-//     };
-
-
-// export default handler;
-
-
-import { Types } from "mongoose";
-import { ObjectId } from 'mongoose';
-
-export const PATCH = async ( req: Request) => {
-    try {
-        const body = await req.json();
-        const {productId, New}
+import { NextRequest, NextResponse } from "next/server";
+import DBconnect from "../../../../lib/db";
+import Device from "../../../app/api/modules/Product";
+// Handle GET requests (Fetch all devices)
+export const GET = async () => {
+  try {
+    await DBconnect();
+    const devices = await Device.find();
+    return NextResponse.json(devices, { status: 200 });
+  } catch (error: any) {
+    console.error("Error fetching devices:", error.message);
+    return NextResponse.json(
+      { message: "Failed to fetch devices.", error: error.message },
+      { status: 500 }
+    );
+  }
+};
+// Handle POST requests (Add a new device)
+export const POST = async (req: NextRequest) => {
+  try {
+    await DBconnect();
+    const newDevice = await req.json();
+    console.log("Device to save:", newDevice);
+    const savedDevice = await Device.create(newDevice);
+    return NextResponse.json(
+      { message: "Device saved successfully", savedDevice },
+      { status: 201 }
+    );
+  } catch (error: any) {
+    console.error("Error saving device:", error.message);
+    return NextResponse.json(
+      { message: "Failed to save device.", error: error.message },
+      { status: 500 }
+    );
+  }
+};
+// Handle GET requests for a single device (Fetch a device by ID)
+export const GET_BY_ID = async (req: NextRequest) => {
+  try {
+    await DBconnect();
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "Device ID is required" }, { status: 400 });
     }
-}
+    const device = await Device.findById(id);
+    if (!device) {
+      return NextResponse.json({ error: "Device not found" }, { status: 404 });
+    }
+    return NextResponse.json(device, { status: 200 });
+  } catch (error: any) {
+    console.error("Error fetching device:", error.message);
+    return NextResponse.json(
+      { message: "Failed to fetch device.", error: error.message },
+      { status: 500 }
+    );
+  }
+};
+// Handle PATCH requests (Update a device)
+export const PATCH = async (req: NextRequest) => {
+  try {
+    await DBconnect();
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "Device ID is required" }, { status: 400 });
+    }
+    const updateData = await req.json();
+    console.log("Device to update:", updateData);
+    const updatedDevice = await Device.findByIdAndUpdate(id, updateData, { new: true });
+    if (!updatedDevice) {
+      return NextResponse.json({ error: "Device not found" }, { status: 404 });
+    }
+    return NextResponse.json(
+      { message: "Device updated successfully", updatedDevice },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    console.error("Error updating device:", error.message);
+    return NextResponse.json(
+      { message: "Failed to update device.", error: error.message },
+      { status: 500 }
+    );
+  }
+};
+// Handle DELETE requests (Delete a device)
+export const DELETE = async (req: NextRequest) => {
+  try {
+    await DBconnect();
+    const { id } = await req.json();
+    if (!id) {
+      return NextResponse.json({ error: "Device ID is required" }, { status: 400 });
+    }
+    const deletedDevice = await Device.findByIdAndDelete(id);
+    if (!deletedDevice) {
+      return NextResponse.json({ error: "Device not found" }, { status: 404 });
+    }
+    return NextResponse.json(
+      { message: "Device deleted successfully", deletedDevice },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    console.error("Error deleting device:", error.message);
+    return NextResponse.json(
+      { message: "Failed to delete device.", error: error.message },
+      { status: 500 }
+    );
+  }
+};
